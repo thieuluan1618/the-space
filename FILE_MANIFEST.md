@@ -1,105 +1,70 @@
-# The Space Project - File Manifest
+# The Space — File Manifest
 
-## 📋 Complete File List
+## Active Files
 
-### Configuration Files
-- `package.json` - Dependencies and scripts
-- `next.config.js` - Next.js configuration
-- `tsconfig.json` - TypeScript configuration
-- `tailwind.config.js` - Tailwind CSS configuration
-- `postcss.config.js` - PostCSS configuration
-- `.env.example` - Environment variables template
+### Configuration
+- `package.json` — Dependencies and scripts
+- `next.config.js` — Next.js config (image remotePatterns)
+- `tailwind.config.js` — Material design color tokens, Inter font, 0px radius
+- `tsconfig.json` — TypeScript config
+- `postcss.config.js` — PostCSS config
+- `.env.example` — Environment variables template
 
-### App Directory (app/)
+### App Pages
+- `app/layout.tsx` — Root layout, Inter font, metadata
+- `app/globals.css` — Base styles, safe-area padding
+- `app/page.tsx` — Lobby (Server Component)
+- `app/seasons/page.tsx` — All seasons list (Server Component)
+- `app/seasons/[slug]/page.tsx` — Season detail (Server Component)
+- `app/works/page.tsx` — All works with search + pagination (Server Component)
+- `app/works/[id]/page.tsx` — Look detail with prev/next (Server Component)
 
-#### Root Files
-- `app/layout.tsx` - Root layout with metadata
-- `app/page.tsx` - Main application (state management)
-- `app/globals.css` - Global styles
+### UI Components (active)
+- `app/components/UI/TopAppBar.tsx` — Sticky header with glassmorphism + back button
+- `app/components/UI/BottomNav.tsx` — Mobile bottom nav (Lobby · Seasons · Works)
+- `app/components/UI/CollectionCard.tsx` — Lobby collection card (alternating alignment)
+- `app/components/UI/LookCard.tsx` — Look image card linking to `/works/[id]`
+- `app/components/UI/SearchBar.tsx` — Client, updates `?q=` URL param
+- `app/components/UI/Pagination.tsx` — Client, updates `?page=` URL param
 
-#### Components
-- `app/components/Scene.tsx` - 3D Canvas wrapper
-- `app/components/3d/Lobby.tsx` - Lobby scene
-- `app/components/3d/CollectionRoom.tsx` - Gallery room scene
-- `app/components/UI/Navigation.tsx` - Top navigation UI
-- `app/components/UI/LookDetail.tsx` - Detail popup
-- `app/components/UI/LoadingScreen.tsx` - Loading state
-
-#### Lib (Utilities)
-- `app/lib/types.ts` - TypeScript interfaces
-- `app/lib/supabase.ts` - Supabase client and queries
-- `app/lib/imageLoader.ts` - Image loading utilities
+### Library
+- `app/lib/types.ts` — `Collection`, `Look`, `ViewState` interfaces
+- `app/lib/supabase.ts` — `getCollections`, `getCollectionBySlug`, `getLooksByCollection`, `getAllLooks`, `getLook`
+- `app/lib/imageLoader.ts` — Image loading utilities
 
 ### Documentation
-- `README.md` - Main documentation
-- `SUPABASE_SETUP.md` - Database setup guide
-- `QUICK_START.sh` - Quick start script
-- `FILE_MANIFEST.md` - This file
-
-### Development Files
-- `NEXT_PUBLIC_SUPABASE_URL` - In `.env.local`
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY` - In `.env.local`
-
-## 📦 Total Files: 18
-- Configuration: 6
-- App Code: 10
-- Documentation: 3
-
-## 🔧 Getting Started Checklist
-
-- [ ] Copy all files to your project directory
-- [ ] Run `npm install`
-- [ ] Create `.env.local` with Supabase credentials
-- [ ] Follow SUPABASE_SETUP.md to create tables
-- [ ] Run `npm run dev`
-- [ ] Test at http://localhost:3000
-
-## 📊 Code Stats
-
-| Category | Count | Lines |
-|----------|-------|-------|
-| React Components | 6 | ~800 |
-| 3D Components | 2 | ~600 |
-| Utilities | 3 | ~200 |
-| Config | 6 | ~150 |
-| **Total** | **17** | **~1,750** |
-
-## 🎯 Key Entry Points
-
-1. **Start Here**: `app/page.tsx` (main app)
-2. **3D Logic**: `app/components/Scene.tsx` (canvas)
-3. **Data**: `app/lib/supabase.ts` (database)
-4. **Styling**: `tailwind.config.js` (colors/design)
-5. **Deployment**: `next.config.js` (production)
-
-## 🚀 Modification Guide
-
-Want to customize? Here's where to change each thing:
-
-| What | File |
-|------|------|
-| Colors | `tailwind.config.js` + `app/globals.css` |
-| 3D Geometry | `app/components/3d/*.tsx` |
-| Typography | `app/components/UI/*.tsx` |
-| Database | Supabase dashboard |
-| Domain | Vercel project settings |
-| Metadata/SEO | `app/layout.tsx` |
-
-## 📈 Performance Notes
-
-- **Bundle Size**: ~1.2MB (dev) / ~400KB (prod gzipped)
-- **3D Rendering**: 60 FPS on modern browsers
-- **Mobile**: Optimized for iPhone 12+
-- **Load Time**: <3 seconds on 4G
-
-## 🔐 Security
-
-- All data is read-only (public gallery)
-- No authentication in MVP
-- Supabase RLS policies ensure data safety
-- No sensitive information in code
+- `README.md` — Project overview and setup
+- `CLAUDE.md` — AI assistant guidance
+- `SUPABASE_SETUP.md` — Database schema and setup SQL
+- `FILE_MANIFEST.md` — This file
 
 ---
 
-**Last Updated**: 2026-03-29
-**Version**: 0.1.0 (MVP)
+## Parked Files (3D — do not import)
+
+These files are preserved for a future Phase 3 re-introduction of the 3D experience.
+
+- `app/components/Scene.tsx` — React Three Fiber canvas manager
+- `app/components/3d/Lobby.tsx` — 3D museum lobby
+- `app/components/3d/CollectionRoom.tsx` — 3D gallery room
+- `app/components/UI/LookDetail.tsx` — Old modal overlay (superseded by `/works/[id]`)
+- `app/components/UI/Navigation.tsx` — Old breadcrumb nav (superseded by TopAppBar)
+- `app/components/UI/LoadingScreen.tsx` — Old loading state
+
+---
+
+## Stats
+
+| Category | Files | Notes |
+|---|---|---|
+| Pages | 5 | All Server Components |
+| Active UI components | 6 | 2 Client, 4 Server |
+| Library modules | 3 | supabase, types, imageLoader |
+| Config | 6 | next, tailwind, ts, postcss, pkg, env |
+| Parked (3D) | 6 | Preserved, not imported |
+| **Total active** | **20** | |
+
+---
+
+**Last Updated**: 2026-03-30
+**Version**: 0.2.0 (2D MVP)

@@ -6,6 +6,7 @@ export interface Collection {
   description: string
   slug: string
   order: number
+  cover_image?: string
   created_at?: string
 }
 

@@ -4,6 +4,7 @@
 @tailwind utilities;
 
 :root {
+  /* Legacy tokens — kept for parked 3D components */
   --color-bg: #F8F7F4;
   --color-bg-dark: #0F0F0D;
   --color-text: #1A1A18;
@@ -14,47 +15,33 @@
 
 html {
   scroll-behavior: smooth;
-}
-
-body {
-  background-color: var(--color-bg);
-  color: var(--color-text);
-  font-family: Georgia, serif;
-}
-
-/* Smooth transitions */
-* {
-  transition: color 0.3s ease, background-color 0.3s ease;
-}
-
-/* Prevent layout shift on scrollbar */
-html {
   overflow-y: scroll;
 }
 
-/* Typography */
-h1, h2, h3, h4, h5, h6 {
-  font-family: Georgia, serif;
-  font-weight: 700;
-  line-height: 1.2;
+body {
+  background-color: #faf9f6;
+  color: #2f3430;
+  font-family: 'Inter', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-p {
-  line-height: 1.6;
-}
-
-/* Links */
-a {
-  color: var(--color-accent);
-  text-decoration: none;
-  transition: color 0.3s ease;
-}
-
-a:hover {
-  color: var(--color-text);
-}
-
-/* Three.js canvas styles */
+/* Three.js canvas styles — kept for parked 3D */
 canvas {
   display: block;
+}
+
+/* Image protection — prevent casual drag-to-desktop and right-click save.
+   pointer-events: none means right-click passes to the container (which blocks it via onContextMenu).
+   Clicks still propagate to parent <a>/<button> elements normally. */
+img {
+  -webkit-user-drag: none;
+  user-select: none;
+  -webkit-user-select: none;
+  pointer-events: none;
+}
+
+/* Safe area padding for mobile bottom nav */
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
 }

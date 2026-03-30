@@ -4,7 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**The Space** is a 3D virtual museum experience for fashion designer Trinh Chau. Built with Next.js 14, React Three Fiber, and Supabase. It's a single-page app with no commerce — pure artistic presentation.
+**The Space** is a mobile-first 2D digital gallery for fashion designer Trinh Chau. Built with Next.js 14, Tailwind CSS, and Supabase. Multi-page app with Server Components, search, and pagination.
+
+> The 3D React Three Fiber experience is **parked** — do not re-activate or import those components.
 
 ## Commands
 
@@ -14,62 +16,89 @@ npm run build    # Production build
 npm run lint     # ESLint
 ```
 
-## Critical: File Structure
-
-**The source files are currently delivered as flat files with hyphenated prefixes, not organized into directories.** Before the project will run as a Next.js app, they must be moved into their proper locations:
-
-| Current flat file | Target path |
-|---|---|
-| `app-layout.tsx` | `app/layout.tsx` |
-| `app-page.tsx` | `app/page.tsx` |
-| `app-globals.css` | `app/globals.css` |
-| `components-Scene.tsx` | `app/components/Scene.tsx` |
-| `components-3d-Lobby.tsx` | `app/components/3d/Lobby.tsx` |
-| `components-3d-CollectionRoom.tsx` | `app/components/3d/CollectionRoom.tsx` |
-| `components-UI-Navigation.tsx` | `app/components/UI/Navigation.tsx` |
-| `components-UI-LookDetail.tsx` | `app/components/UI/LookDetail.tsx` |
-| `components-UI-LoadingScreen.tsx` | `app/components/UI/LoadingScreen.tsx` |
-| `lib-types.ts` | `app/lib/types.ts` |
-| `lib-supabase.ts` | `app/lib/supabase.ts` |
-| `lib-imageLoader.ts` | `app/lib/imageLoader.ts` |
-
 ## Architecture
 
-Single-page app with three view states (`ViewState = 'lobby' | 'collection' | 'detail'`):
+Multi-page app with Next.js App Router:
 
 ```
-app/page.tsx              ← State root (ViewState, selected collection/look)
-├── components/Scene.tsx  ← React Three Fiber Canvas + OrbitControls + lighting
-│   ├── 3d/Lobby.tsx      ← 3D museum lobby with clickable doors (one per collection)
-│   └── 3d/CollectionRoom.tsx  ← 3D gallery room with look displays on walls
-├── UI/Navigation.tsx     ← Breadcrumb nav (Back to lobby)
-├── UI/LookDetail.tsx     ← Detail modal (materials, inspiration, image)
-└── UI/LoadingScreen.tsx  ← Suspense fallback
+app/
+├── page.tsx                    ← Lobby (Server Component)
+├── seasons/
+│   ├── page.tsx                ← All seasons list
+│   └── [slug]/page.tsx         ← Season detail (masonry grid)
+├── works/
+│   ├── page.tsx                ← All works (search + pagination)
+│   └── [id]/page.tsx           ← Look detail (prev/next nav)
+├── components/
+│   ├── UI/
+│   │   ├── TopAppBar.tsx       ← Sticky header (glassmorphism)
+│   │   ├── BottomNav.tsx       ← Mobile bottom nav (Lobby·Seasons·Works)
+│   │   ├── CollectionCard.tsx  ← Lobby collection card
+│   │   ├── LookCard.tsx        ← Look image card
+│   │   ├── SearchBar.tsx       ← Client component, updates ?q= URL param
+│   │   └── Pagination.tsx      ← Client component, updates ?page= URL param
+│   └── 3d/                     ← PARKED — do not import
+│       ├── Lobby.tsx
+│       └── CollectionRoom.tsx
+├── lib/
+│   ├── types.ts                ← Collection, Look interfaces
+│   ├── supabase.ts             ← getCollections, getCollectionBySlug,
+│   │                              getLooksByCollection, getAllLooks, getLook
+│   └── imageLoader.ts
+└── globals.css
 ```
 
-Data flows from Supabase → `app/lib/supabase.ts` (getCollections, getLooksByCollection, getLook) → `app/page.tsx` state → 3D scenes.
+Data flows: Supabase → Server Components (page.tsx, seasons/*, works/*) → UI components.
+Search and pagination state lives in URL params (`?q=`, `?page=`), read by Server Components.
+
+## URL Structure
+
+| Route | Description |
+|---|---|
+| `/` | Lobby — hero + vertical collection cards |
+| `/seasons` | All seasons list |
+| `/seasons/[slug]` | Season detail — masonry look grid |
+| `/works` | All works — search (`?q=`), pagination (`?page=`) |
+| `/works/[id]` | Look detail — art frame, placard, prev/next |
 
 ## Environment Setup
 
-Create `.env.local` from `.env.example`:
+Create `.env.local`:
 ```
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 ```
 
-Database schema is in `SUPABASE_SETUP.md`. Tables: `collections` (id, name, description, slug, order) and `looks` (id, collection_id, name, materials, inspiration, image_url, order). Both are public read-only with Supabase RLS.
+Database schema is in `SUPABASE_SETUP.md`. Tables: `collections` (id, name, description, slug, sort_order, status) and `looks` (id, collection_id, name, description, tags, photos, sort_order, status).
 
-## Design Tokens
+## Design System
 
-Defined in `app/globals.css` and `tailwind.config.js`:
-- `--color-bg: #F8F7F4` — warm off-white (UI background)
-- `--color-bg-dark: #0F0F0D` — near-black (3D scene background)
-- `--color-accent: #C8B89A` — warm sand
-- Georgia serif font throughout
+**Font:** Inter (via `next/font/google`)
+**Palette:** Material Design warm neutrals — key tokens:
+- `background: #faf9f6` — page background
+- `surface-container-high: #e6e9e4` — image frames, cards
+- `inverse-surface: #0d0f0d` — primary headings
+- `secondary: #6a5e45` — labels, CTAs, accents
+- `on-surface-variant: #5c605c` — body text, descriptions
+- `outline-variant: #afb3ae` — subtle dividers
+
+**Border radius:** `0px` everywhere (full: 9999px only)
+**Labels:** `text-[0.6875rem] uppercase tracking-label font-medium`
+**Display headings:** `tracking-display` (`-0.04em`)
 
 ## Key Constraints
 
 - **No commerce** — no cart, checkout, or buy buttons (by design)
-- **Shakespearean/poetic language** in all UI copy
-- Mobile-first 3D performance: DPR capped at 1–1.5 on mobile, simplified geometry on small screens
+- **No borders** for sectioning — use background color shifts instead
+- **No rounded corners** — architectural/editorial aesthetic
 - All Supabase queries are read-only; no auth in MVP
+- Images use `next/image` with `loading="lazy"` (first 2–4 images use `priority`)
+
+## Parked Files (3D — do not import or modify)
+
+- `app/components/3d/Lobby.tsx`
+- `app/components/3d/CollectionRoom.tsx`
+- `app/components/Scene.tsx`
+- `app/components/UI/LookDetail.tsx` (old modal, superseded by `/works/[id]`)
+- `app/components/UI/Navigation.tsx` (old nav, superseded by TopAppBar)
+- `app/components/UI/LoadingScreen.tsx`

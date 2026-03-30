@@ -4,6 +4,13 @@ const nextConfig = {
   images: {
     remotePatterns: [
       {
+        // Supabase Storage (primary image source)
+        protocol: 'https',
+        hostname: '*.supabase.co',
+        pathname: '/storage/v1/object/public/**',
+      },
+      {
+        // Catch-all for any other HTTPS image source
         protocol: 'https',
         hostname: '**',
       },

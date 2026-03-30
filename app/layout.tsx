@@ -1,13 +1,19 @@
-// app/layout.tsx
 import type { Metadata } from 'next'
+import { Inter } from 'next/font/google'
 import './globals.css'
 
+const inter = Inter({
+  subsets: ['latin'],
+  variable: '--font-inter',
+  display: 'swap',
+})
+
 export const metadata: Metadata = {
-  title: 'The Space Project | Trinh Chau Fashion Design',
-  description: 'A 3D museum experience showcasing the fashion design work of Trinh Chau.',
+  title: 'The Space — Trinh Chau',
+  description: 'A curated digital gallery showcasing the fashion design work of Trinh Chau.',
   openGraph: {
-    title: 'The Space Project | Trinh Chau',
-    description: 'Enter the museum. Explore collections of hand-crafted fashion design.',
+    title: 'The Space — Trinh Chau',
+    description: 'Explore curated collections of hand-crafted fashion design.',
     type: 'website',
     url: 'https://thespacepy.com',
     images: [{
@@ -18,8 +24,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'The Space Project',
-    description: 'A 3D fashion museum experience',
+    title: 'The Space — Trinh Chau',
+    description: 'A curated digital gallery of fashion design.',
   },
 }
 
@@ -29,13 +35,11 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en">
+    <html lang="en" className={inter.variable}>
       <head>
-        <meta name="theme-color" content="#F8F7F4" />
+        <meta name="theme-color" content="#faf9f6" />
       </head>
-      <body className="bg-bg text-text antialiased" style={{
-        fontFamily: 'Georgia, serif',
-      }}>
+      <body className={`${inter.className} bg-background text-on-surface antialiased`}>
         {children}
       </body>
     </html>

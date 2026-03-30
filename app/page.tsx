@@ -1,134 +1,73 @@
-// app/page.tsx
-'use client'
+import Link from 'next/link'
+import TopAppBar from './components/UI/TopAppBar'
+import BottomNav from './components/UI/BottomNav'
+import CollectionCard from './components/UI/CollectionCard'
+import { getCollections } from './lib/supabase'
 
-import React, { useState, useEffect, Suspense } from 'react'
-import dynamic from 'next/dynamic'
-import Navigation from './components/UI/Navigation'
-import LookDetail from './components/UI/LookDetail'
-import LoadingScreen from './components/UI/LoadingScreen'
-import { getCollections, getLooksByCollection } from './lib/supabase'
-import type { Collection, Look, ViewState } from './lib/types'
-
-// Dynamically import Scene to avoid SSR issues with Three.js
-const Scene = dynamic(() => import('./components/Scene'), {
-  ssr: false,
-  loading: () => <LoadingScreen />,
-})
-
-export default function Home() {
-  const [currentView, setCurrentView] = useState<ViewState>('lobby')
-  const [collections, setCollections] = useState<Collection[]>([])
-  const [selectedCollection, setSelectedCollection] = useState<Collection | null>(null)
-  const [looks, setLooks] = useState<Look[]>([])
-  const [selectedLook, setSelectedLook] = useState<Look | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-
-  // Fetch collections on mount
-  useEffect(() => {
-    const fetchCollections = async () => {
-      try {
-        const data = await getCollections()
-        setCollections(data)
-      } catch (error) {
-        console.error('Failed to fetch collections:', error)
-      } finally {
-        setIsLoading(false)
-      }
-    }
-
-    fetchCollections()
-  }, [])
-
-  // Fetch looks when collection is selected
-  useEffect(() => {
-    if (selectedCollection) {
-      const fetchLooks = async () => {
-        const data = await getLooksByCollection(selectedCollection.id)
-        setLooks(data)
-      }
-      fetchLooks()
-    }
-  }, [selectedCollection])
-
-  const handleCollectionSelect = (collection: Collection) => {
-    setSelectedCollection(collection)
-    setCurrentView('collection')
-  }
-
-  const handleLookSelect = (look: Look) => {
-    setSelectedLook(look)
-    setCurrentView('detail')
-  }
-
-  const handleBackToLobby = () => {
-    setCurrentView('lobby')
-    setSelectedCollection(null)
-    setLooks([])
-    setSelectedLook(null)
-  }
-
-  const handleBackToCollection = () => {
-    setCurrentView('collection')
-    setSelectedLook(null)
-  }
-
-  const handleShare = () => {
-    if (navigator.share && selectedLook) {
-      navigator.share({
-        title: `${selectedLook.name} by Trinh Chau`,
-        text: selectedLook.inspiration,
-        url: window.location.href,
-      })
-    } else {
-      // Fallback: copy to clipboard
-      const shareText = `Check out "${selectedLook?.name}" from The Space Project by Trinh Chau`
-      navigator.clipboard.writeText(shareText)
-      alert('Link copied to clipboard!')
-    }
-  }
-
-  if (isLoading) {
-    return <LoadingScreen />
-  }
+export default async function LobbyPage() {
+  const collections = await getCollections()
 
   return (
-    <main className="w-full h-screen overflow-hidden bg-bg-dark">
-      {/* 3D Canvas */}
-      <div className="w-full h-full">
-        <Suspense fallback={<LoadingScreen />}>
-          <Scene
-            currentView={currentView}
-            collections={collections}
-            selectedCollection={selectedCollection}
-            looks={looks}
-            onCollectionSelect={handleCollectionSelect}
-            onLookSelect={handleLookSelect}
-            onBackToLobby={handleBackToLobby}
-          />
-        </Suspense>
-      </div>
+    <div className="min-h-screen bg-background pb-24 md:pb-0">
+      <TopAppBar rightLabel="About" rightHref="/about" />
 
-      {/* UI Overlays */}
-      <Navigation
-        currentView={currentView}
-        selectedCollection={selectedCollection}
-        onBackToLobby={handleBackToLobby}
-      />
+      <main className="pt-6 pb-16 px-6 max-w-2xl mx-auto">
+        {/* Hero */}
+        <section className="mb-20">
+          <p className="text-[0.6875rem] uppercase tracking-label font-medium text-secondary mb-4">
+            A Curated Showing
+          </p>
+          <h1 className="text-[3.5rem] leading-[1.05] font-bold tracking-display text-inverse-surface mb-8">
+            Works Now<br />Showing
+          </h1>
+          <p className="text-lg leading-relaxed text-on-surface-variant max-w-md">
+            Each season a testament to form and fabric. These works are shown as they deserve — without commerce, without haste, in quiet witness to the art of Trinh Chau.
+          </p>
+          <div className="mt-8 flex gap-6">
+            <Link
+              href="/works"
+              className="text-[0.6875rem] font-medium uppercase tracking-label text-secondary border-b border-secondary/30 pb-1 hover:border-secondary transition-colors duration-300 no-underline"
+            >
+              Peruse the Archive
+            </Link>
+            <Link
+              href="/seasons"
+              className="text-[0.6875rem] font-medium uppercase tracking-label text-secondary border-b border-secondary/30 pb-1 hover:border-secondary transition-colors duration-300 no-underline"
+            >
+              Browse the Seasons
+            </Link>
+          </div>
+        </section>
 
-      {currentView === 'detail' && (
-        <LookDetail
-          look={selectedLook}
-          onClose={handleBackToCollection}
-          onShare={handleShare}
-        />
-      )}
+        {/* Collections */}
+        {collections.length > 0 ? (
+          <div className="flex flex-col gap-24">
+            {collections.map((collection, index) => (
+              <CollectionCard
+                key={collection.id}
+                collection={collection}
+                index={index}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="py-24 text-center text-on-surface-variant">
+            <p className="text-[0.6875rem] uppercase tracking-label">No works are yet displayed</p>
+          </div>
+        )}
 
-      {/* Mobile hint */}
-      {currentView === 'lobby' && (
-        <div className="fixed bottom-8 left-8 right-8 md:right-auto text-center md:text-left text-text-muted text-xs italic">
-          <p>Drag to rotate • Scroll to zoom • Click a door to enter</p>
-        </div>
-      )}
-    </main>
+        {/* Footer */}
+        <footer className="mt-32 mb-4 text-center border-t border-outline-variant/10 pt-10">
+          <p className="text-[0.6875rem] uppercase tracking-[0.2em] font-bold text-primary mb-2">
+            The Space
+          </p>
+          <p className="text-[0.6rem] text-on-surface-variant/50 uppercase tracking-label">
+            Trinh Chau
+          </p>
+        </footer>
+      </main>
+
+      <BottomNav active="lobby" />
+    </div>
   )
 }
