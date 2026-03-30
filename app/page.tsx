@@ -9,7 +9,7 @@ export default async function LobbyPage() {
 
   return (
     <div className="min-h-screen bg-background pb-24 md:pb-0">
-      <TopAppBar rightLabel="About" />
+      <TopAppBar rightLabel="About" rightHref="/about" />
 
       <main className="pt-6 pb-16 px-6 max-w-2xl mx-auto">
         {/* Hero */}

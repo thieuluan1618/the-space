@@ -7,14 +7,21 @@ const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
 
 export const supabase = createClient(supabaseUrl, supabaseKey)
 
-/** Converts a storage_url that may be a relative path into a full HTTPS URL.
- *  e.g. "/looks_example/foo.jpg" →
- *  "https://xxx.supabase.co/storage/v1/object/public/looks_example/foo.jpg"
+/** Converts a storage_url into a full HTTPS URL.
+ *  Handles legacy DB paths: "/looks_example/collection_{name}/{file}"
+ *  → "https://xxx.supabase.co/storage/v1/object/public/media/looks/{slug}/{file}"
  */
 function resolveStorageUrl(storageUrl: string): string {
   if (!storageUrl) return ''
   if (storageUrl.startsWith('http')) return storageUrl
   const base = supabaseUrl.replace(/\/$/, '')
+  // Legacy path pattern: /looks_example/collection_{slug_underscored}/{filename}
+  const legacy = storageUrl.match(/^\/looks_example\/collection_([^/]+)\/(.+)$/)
+  if (legacy) {
+    const slug = legacy[1].replace(/_/g, '-').toLowerCase()
+    const filename = legacy[2]
+    return `${base}/storage/v1/object/public/media/looks/${slug}/${filename}`
+  }
   const path = storageUrl.startsWith('/') ? storageUrl : `/${storageUrl}`
   return `${base}/storage/v1/object/public${path}`
 }
