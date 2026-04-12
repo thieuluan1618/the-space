@@ -26,29 +26,29 @@ export default function Pagination({ currentPage, totalPages }: PaginationProps)
   }
 
   return (
-    <div className="flex items-center justify-between pt-12 border-t border-outline-variant/15">
+    <div className="flex items-center justify-between pt-12 border-t border-outline-variant">
       <button
         onClick={() => goToPage(currentPage - 1)}
         disabled={currentPage <= 1}
-        className="flex items-center gap-2 text-[0.6875rem] uppercase tracking-label font-medium text-secondary disabled:text-on-surface-variant/30 disabled:cursor-not-allowed hover:text-secondary/70 transition-colors duration-200"
+        className="flex items-center gap-2 font-mono text-[0.6875rem] uppercase tracking-label bg-on-surface text-background px-5 py-2.5 rounded-pill disabled:opacity-20 disabled:cursor-not-allowed hover:opacity-80 transition-opacity duration-200"
         aria-label="Previous page"
       >
-        <ChevronLeft size={16} />
+        <ChevronLeft size={14} />
         Previous
       </button>
 
-      <span className="text-[0.6875rem] uppercase tracking-label text-on-surface-variant">
+      <span className="font-mono text-[0.6875rem] uppercase tracking-label text-on-surface/40">
         {currentPage} / {totalPages}
       </span>
 
       <button
         onClick={() => goToPage(currentPage + 1)}
         disabled={currentPage >= totalPages}
-        className="flex items-center gap-2 text-[0.6875rem] uppercase tracking-label font-medium text-secondary disabled:text-on-surface-variant/30 disabled:cursor-not-allowed hover:text-secondary/70 transition-colors duration-200"
+        className="flex items-center gap-2 font-mono text-[0.6875rem] uppercase tracking-label bg-on-surface text-background px-5 py-2.5 rounded-pill disabled:opacity-20 disabled:cursor-not-allowed hover:opacity-80 transition-opacity duration-200"
         aria-label="Next page"
       >
         Next
-        <ChevronRight size={16} />
+        <ChevronRight size={14} />
       </button>
     </div>
   )

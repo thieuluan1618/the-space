@@ -1,10 +1,18 @@
 import type { Metadata } from 'next'
-import { Inter } from 'next/font/google'
+import { Inter, Space_Mono } from 'next/font/google'
 import './globals.css'
 
 const inter = Inter({
   subsets: ['latin'],
+  weight: ['300', '400', '500', '700'],
   variable: '--font-inter',
+  display: 'swap',
+})
+
+const spaceMono = Space_Mono({
+  subsets: ['latin'],
+  weight: ['400', '700'],
+  variable: '--font-space-mono',
   display: 'swap',
 })
 
@@ -35,9 +43,9 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en" className={inter.variable}>
+    <html lang="en" className={`${inter.variable} ${spaceMono.variable}`}>
       <head>
-        <meta name="theme-color" content="#faf9f6" />
+        <meta name="theme-color" content="#ffffff" />
       </head>
       <body className={`${inter.className} bg-background text-on-surface antialiased`}>
         {children}

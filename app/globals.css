@@ -19,11 +19,13 @@ html {
 }
 
 body {
-  background-color: #faf9f6;
-  color: #2f3430;
-  font-family: 'Inter', sans-serif;
+  background-color: #ffffff;
+  color: #000000;
+  font-family: var(--font-inter), SF Pro Display, system-ui, helvetica, sans-serif;
+  font-feature-settings: "kern";
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  letter-spacing: -0.14px;
 }
 
 /* Three.js canvas styles — kept for parked 3D */
@@ -44,4 +46,10 @@ img {
 /* Safe area padding for mobile bottom nav */
 .pb-safe {
   padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* Dashed focus outline — Figma's signature accessibility pattern */
+*:focus-visible {
+  outline: 2px dashed #000000;
+  outline-offset: 2px;
 }

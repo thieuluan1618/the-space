@@ -14,27 +14,27 @@ export default async function LobbyPage() {
       <main className="pt-6 pb-16 px-6 max-w-2xl mx-auto">
         {/* Hero */}
         <section className="mb-20">
-          <p className="text-[0.6875rem] uppercase tracking-label font-medium text-secondary mb-4">
+          <p className="font-mono text-[0.6875rem] uppercase tracking-label text-on-surface/40 mb-6">
             A Curated Showing
           </p>
-          <h1 className="text-[3.5rem] leading-[1.05] font-bold tracking-display text-inverse-surface mb-8">
+          <h1 className="text-[3.5rem] leading-[1.0] font-light text-on-surface mb-8" style={{ letterSpacing: '-1.72px' }}>
             Works Now<br />Showing
           </h1>
-          <p className="text-lg leading-relaxed text-on-surface-variant max-w-md">
+          <p className="text-lg font-light leading-relaxed text-on-surface-variant max-w-md" style={{ letterSpacing: '-0.14px' }}>
             Each season a testament to form and fabric. These works are shown as they deserve — without commerce, without haste, in quiet witness to the art of Trinh Chau.
           </p>
-          <div className="mt-8 flex gap-6">
+          <div className="mt-10 flex gap-3">
             <Link
               href="/works"
-              className="text-[0.6875rem] font-medium uppercase tracking-label text-secondary border-b border-secondary/30 pb-1 hover:border-secondary transition-colors duration-300 no-underline"
+              className="inline-flex items-center font-mono text-[0.6875rem] uppercase tracking-label bg-on-surface text-background px-5 py-2.5 rounded-pill hover:opacity-80 transition-opacity duration-200 no-underline"
             >
               Peruse the Archive
             </Link>
             <Link
               href="/seasons"
-              className="text-[0.6875rem] font-medium uppercase tracking-label text-secondary border-b border-secondary/30 pb-1 hover:border-secondary transition-colors duration-300 no-underline"
+              className="inline-flex items-center font-mono text-[0.6875rem] uppercase tracking-label border border-on-surface text-on-surface px-5 py-2.5 rounded-pill hover:bg-on-surface hover:text-background transition-colors duration-200 no-underline"
             >
-              Browse the Seasons
+              Browse Seasons
             </Link>
           </div>
         </section>
@@ -57,11 +57,11 @@ export default async function LobbyPage() {
         )}
 
         {/* Footer */}
-        <footer className="mt-32 mb-4 text-center border-t border-outline-variant/10 pt-10">
-          <p className="text-[0.6875rem] uppercase tracking-[0.2em] font-bold text-primary mb-2">
+        <footer className="mt-32 mb-4 text-center border-t border-outline-variant pt-10">
+          <p className="font-mono text-[0.6875rem] uppercase tracking-label text-on-surface mb-1">
             The Space
           </p>
-          <p className="text-[0.6rem] text-on-surface-variant/50 uppercase tracking-label">
+          <p className="font-mono text-[0.6rem] text-on-surface/30 uppercase tracking-mono-sm">
             Trinh Chau
           </p>
         </footer>

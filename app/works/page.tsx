@@ -27,14 +27,14 @@ export default async function WorksPage({ searchParams }: WorksPageProps) {
       <main className="pt-6 pb-16 px-6 max-w-2xl mx-auto">
         {/* Header */}
         <section className="mb-10">
-          <p className="text-[0.6875rem] uppercase tracking-label font-medium text-secondary mb-4">
+          <p className="font-mono text-[0.6875rem] uppercase tracking-label text-on-surface/40 mb-4">
             All Works
           </p>
-          <h1 className="text-[2.5rem] leading-[1.05] font-bold tracking-display text-inverse-surface mb-2">
+          <h1 className="text-[2.5rem] leading-[1.05] font-light text-on-surface mb-2" style={{ letterSpacing: '-0.96px' }}>
             The Archive
           </h1>
           {total > 0 && (
-            <p className="text-[0.6875rem] uppercase tracking-label text-on-surface-variant">
+            <p className="font-mono text-[0.6875rem] uppercase tracking-label text-on-surface/40">
               {total} {total === 1 ? 'piece' : 'pieces'}
               {query && ` answering "${query}"`}
             </p>

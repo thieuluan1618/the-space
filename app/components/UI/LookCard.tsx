@@ -35,11 +35,11 @@ export default function LookCard({ look, priority = false }: LookCardProps) {
         )}
       </div>
       <div className="mt-3 space-y-1">
-        <p className="text-sm font-medium text-inverse-surface leading-tight group-hover:text-secondary transition-colors duration-200">
+        <p className="text-sm font-light text-on-surface leading-tight group-hover:opacity-60 transition-opacity duration-200" style={{ letterSpacing: '-0.14px' }}>
           {look.name}
         </p>
         {look.materials && look.materials !== 'Details forthcoming' && (
-          <p className="text-[0.6875rem] text-on-surface-variant truncate">
+          <p className="font-mono text-[0.6875rem] uppercase tracking-label text-on-surface/40 truncate">
             {look.materials}
           </p>
         )}

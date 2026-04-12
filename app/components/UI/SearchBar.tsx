@@ -30,7 +30,7 @@ export default function SearchBar({ placeholder = 'Search works...' }: SearchBar
 
   return (
     <div className="relative w-full">
-      <div className="absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none">
+      <div className="absolute left-4 top-1/2 -translate-y-1/2 text-on-surface/40 pointer-events-none">
         <Search size={16} className={isPending ? 'animate-pulse' : ''} />
       </div>
       <input
@@ -38,13 +38,14 @@ export default function SearchBar({ placeholder = 'Search works...' }: SearchBar
         defaultValue={query}
         placeholder={placeholder}
         onChange={(e) => updateQuery(e.target.value)}
-        className="w-full bg-surface-container-low pl-10 pr-10 py-3 text-sm text-on-surface placeholder:text-on-surface-variant/50 outline-none focus:bg-surface-container transition-colors duration-200 border-0"
+        className="w-full border border-outline-variant rounded-pill bg-background pl-10 pr-10 py-3 text-sm font-light text-on-surface placeholder:text-on-surface/30 outline-none focus:border-on-surface transition-colors duration-200"
+        style={{ letterSpacing: '-0.14px' }}
         aria-label="Search"
       />
       {query && (
         <button
           onClick={() => updateQuery('')}
-          className="absolute right-4 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-on-surface transition-colors"
+          className="absolute right-4 top-1/2 -translate-y-1/2 text-on-surface/40 hover:text-on-surface transition-colors"
           aria-label="Clear search"
         >
           <X size={14} />
