@@ -243,7 +243,6 @@ export default function TestPage() {
             onCollectionSelect={handleCollectionSelect}
             onLookSelect={() => {}}
             onBackToLobby={() => setCurrentView('lobby')}
-            cameraConfig={cameraConfig}
           />
         </Suspense>
 
