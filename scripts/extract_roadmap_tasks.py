@@ -160,8 +160,8 @@ Item: {item_text}
 
 Based on the actual files above, generate 4–6 specific, actionable sub-tasks to implement this item.
 Reference exact file paths. Point out files that need to be created vs modified.
-Return ONLY a valid JSON array of strings — no explanation, no markdown fences.
-Example: ["Add generateMetadata export to app/works/[id]/page.tsx", "Create app/api/subscribe/route.ts"]"""
+Wrap your answer in <tasks> tags containing only a JSON array of strings. No prose outside the tags.
+Example: <tasks>["Add generateMetadata export to app/works/[id]/page.tsx", "Create app/api/subscribe/route.ts"]</tasks>"""
 
 
 def call_claude(prompt: str, api_key: str) -> list[str]:
@@ -184,7 +184,11 @@ def call_claude(prompt: str, api_key: str) -> list[str]:
         result = json.loads(resp.read())
 
     text = result["content"][0]["text"].strip()
-    # Handle model wrapping output in ```json ... ```
+    # Extract JSON array from <tasks>...</tasks> tags
+    match = re.search(r"<tasks>(.*?)</tasks>", text, re.DOTALL)
+    if match:
+        return json.loads(match.group(1).strip())
+    # Fallback: find outermost [...] array
     match = re.search(r"\[.*\]", text, re.DOTALL)
     if match:
         return json.loads(match.group())
