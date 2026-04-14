@@ -121,7 +121,14 @@ def gh_request(method: str, path: str, token: str, body: dict | None = None):
     try:
         with urllib.request.urlopen(req) as resp:
             return json.loads(resp.read())
-    except urllib.error.HTTPError:
+    except urllib.error.HTTPError as e:
+        # Surface the GitHub error body so 403/422 causes are visible in logs.
+        try:
+            detail = e.read().decode("utf-8", errors="replace")
+        except Exception:
+            detail = ""
+        if detail:
+            print(f"GitHub API {e.code} {method} {path}: {detail}", file=sys.stderr)
         raise
 
 
