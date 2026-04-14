@@ -121,26 +121,51 @@ def gh_request(method: str, path: str, token: str, body: dict | None = None):
     try:
         with urllib.request.urlopen(req) as resp:
             return json.loads(resp.read())
-    except urllib.error.HTTPError:
+    except urllib.error.HTTPError as e:
+        # Surface the GitHub error body so 403/422 causes are visible in logs.
+        try:
+            detail = e.read().decode("utf-8", errors="replace")
+        except Exception:
+            detail = ""
+        if detail:
+            print(f"GitHub API {e.code} {method} {path}: {detail}", file=sys.stderr)
         raise
 
 
-def get_highest_priority_issue(repo: str, token: str) -> dict | None:
-    """Return the single highest-priority open roadmap issue."""
+def get_next_issue(repo: str, token: str) -> dict | None:
+    """
+    Return the next open roadmap issue to work on.
+
+    Ordering:
+      1. Phase milestone — earlier phase first (Phase 2 before Phase 3).
+         Issues with no milestone sort last.
+      2. Priority label — high → medium → low.
+      3. Issue number — older issues first, as a stable tiebreaker.
+    """
     issues = gh_request("GET",
         f"/repos/{repo}/issues?state=open&labels={LABEL}&per_page=100", token)
 
     if not issues:
         return None
 
-    def priority_key(issue):
+    def phase_rank(issue) -> int:
+        milestone = issue.get("milestone")
+        if not milestone:
+            return 999
+        match = re.search(r"Phase\s+(\d+)", milestone.get("title", ""))
+        return int(match.group(1)) if match else 998
+
+    def priority_rank(issue) -> int:
         label_names = {lb["name"] for lb in issue.get("labels", [])}
         for label, order in PRIORITY_ORDER.items():
             if label in label_names:
                 return order
         return 99
 
-    return min(issues, key=priority_key)
+    def sort_key(issue):
+        return (phase_rank(issue), priority_rank(issue), issue["number"])
+
+    return min(issues, key=sort_key)
 
 
 def create_pr(repo: str, token: str, head: str, base: str,
@@ -289,16 +314,17 @@ def main():
         print("ERROR: ANTHROPIC_API_KEY must be set.", file=sys.stderr)
         sys.exit(1)
 
-    # 1. Pick highest-priority issue
-    print("Fetching highest-priority roadmap issue…")
-    issue = get_highest_priority_issue(repo, token)
+    # 1. Pick next issue — earliest phase first, then highest priority
+    print("Fetching next roadmap issue (earliest phase, then highest priority)…")
+    issue = get_next_issue(repo, token)
     if not issue:
         print("No open roadmap issues found — nothing to do.")
         return
 
-    issue_number = issue["number"]
-    issue_title  = issue["title"]
-    print(f"  → #{issue_number}: {issue_title}")
+    issue_number    = issue["number"]
+    issue_title     = issue["title"]
+    milestone_title = (issue.get("milestone") or {}).get("title", "no milestone")
+    print(f"  → #{issue_number} [{milestone_title}]: {issue_title}")
 
     # 2. Parse unchecked tasks
     tasks = parse_unchecked_tasks(issue.get("body") or "")

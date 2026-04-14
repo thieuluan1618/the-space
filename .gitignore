@@ -34,3 +34,7 @@ next-env.d.ts
 
 # images (keep looks_example out of git — large binary files)
 looks_example/
+
+# python bytecode (from scripts/)
+__pycache__/
+*.pyc
