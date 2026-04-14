@@ -2,16 +2,17 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { LayoutGrid, Search, Layers } from 'lucide-react'
+import { LayoutGrid, Search, Layers, BookOpen } from 'lucide-react'
 
 const tabs = [
   { label: 'Lobby', href: '/', icon: LayoutGrid },
   { label: 'Seasons', href: '/seasons', icon: Layers },
   { label: 'Works', href: '/works', icon: Search },
+  { label: 'Blog', href: '/blog', icon: BookOpen },
 ]
 
 interface BottomNavProps {
-  active?: 'lobby' | 'seasons' | 'works'
+  active?: 'lobby' | 'seasons' | 'works' | 'blog'
 }
 
 export default function BottomNav({ active }: BottomNavProps) {
@@ -19,7 +20,7 @@ export default function BottomNav({ active }: BottomNavProps) {
 
   const isActive = (href: string) => {
     if (active) {
-      const map: Record<string, string> = { lobby: '/', seasons: '/seasons', works: '/works' }
+      const map: Record<string, string> = { lobby: '/', seasons: '/seasons', works: '/works', blog: '/blog' }
       return map[active] === href
     }
     if (href === '/') return pathname === '/'

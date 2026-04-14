@@ -21,4 +21,16 @@ export interface Look {
   created_at?: string
 }
 
+export interface BlogPost {
+  id: string
+  title: string
+  slug: string
+  excerpt: string
+  content: string
+  featured_image: string
+  created_at: string
+  published: boolean
+  sort_order: number
+}
+
 export type ViewState = 'lobby' | 'collection' | 'detail'
