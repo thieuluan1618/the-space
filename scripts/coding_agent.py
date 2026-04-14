@@ -348,10 +348,30 @@ def main():
     clean_title = re.sub(r"^\[TaskAugen\]\s*", "", issue_title)
     slug = re.sub(r"[^a-z0-9]+", "-", clean_title.lower()).strip("-")[:40]
     branch = f"taskaugen/issue-{issue_number}-{slug}"
-    base   = git("rev-parse", "--abbrev-ref", "HEAD")
+    base   = "main"
 
-    git("checkout", "-b", branch)
-    print(f"\nBranch: {branch}")
+    # Prefer to branch from upstream/main so the work is based on the
+    # latest upstream code, not the fork which may lag behind.
+    fetched_upstream = False
+    if upstream_repo:
+        upstream_url = (
+            f"https://x-access-token:{upstream_token}@github.com/{upstream_repo}.git"
+            if upstream_token
+            else f"https://github.com/{upstream_repo}.git"
+        )
+        try:
+            git("remote", "add", "upstream", upstream_url)
+            git("fetch", "upstream", "main")
+            fetched_upstream = True
+        except subprocess.CalledProcessError:
+            print("  upstream fetch failed — branching from fork main", file=sys.stderr)
+
+    if fetched_upstream:
+        git("checkout", "-b", branch, "upstream/main")
+        print(f"\nBranch: {branch}  (from upstream/main)")
+    else:
+        git("checkout", "-b", branch)
+        print(f"\nBranch: {branch}  (from fork/main)")
 
     # 5. Implement each task
     all_changed_files: list[str] = []
