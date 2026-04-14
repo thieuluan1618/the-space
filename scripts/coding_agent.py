@@ -4,7 +4,7 @@ coding_agent.py
 1. Fetches the highest-priority open roadmap issue.
 2. Parses its unchecked tasks and asks Claude to sort them easiest → hardest.
 3. For each task (easiest first), asks Claude to generate file changes.
-4. Applies all changes, commits to branch taskaugen/issue-{N}, opens a draft PR.
+4. Applies all changes, commits to branch taskaugen/issue-{N}, opens a PR.
 
 Required env vars:
   GITHUB_TOKEN      — contents: write + pull-requests: write + issues: write
@@ -173,13 +173,12 @@ def get_next_issue(repo: str, token: str) -> dict | None:
 
 def create_pr(repo: str, token: str, head: str, base: str,
               title: str, body: str) -> str:
-    """Create a draft PR. head can be 'branch' or 'owner:branch' for cross-repo."""
+    """Create a PR. head can be 'branch' or 'owner:branch' for cross-repo."""
     result = gh_request("POST", f"/repos/{repo}/pulls", token, {
         "title": title,
         "body": body,
         "head": head,
         "base": base,
-        "draft": True,
     })
     return result["html_url"]
 
@@ -420,7 +419,7 @@ def main():
     git("push", "--force", "-u", "origin", branch)
     print(f"\nPushed branch: {branch}")
 
-    # 8. Create draft PRs
+    # 8. Create PRs
     fork_owner   = repo.split("/")[0]
     changed_list = "\n".join(f"- `{f}`" for f in unique_files)
     task_list    = "\n".join(f"- [x] {t}" for t in tasks)
