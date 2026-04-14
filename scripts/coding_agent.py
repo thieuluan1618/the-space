@@ -90,8 +90,11 @@ def get_relevant_files(task: str, issue_title: str) -> dict[str, str]:
 def git(*args: str) -> str:
     result = subprocess.run(
         ["git"] + list(args),
-        capture_output=True, text=True, check=True,
+        capture_output=True, text=True,
     )
+    if result.returncode != 0:
+        print(f"git {' '.join(args)} failed:\n{result.stderr.strip()}", file=sys.stderr)
+        raise subprocess.CalledProcessError(result.returncode, ["git"] + list(args))
     return result.stdout.strip()
 
 
@@ -393,8 +396,8 @@ def main():
         f"Auto-implemented by TaskAugen coding agent.\n"
         f"Closes #{issue_number}")
 
-    # 7. Push
-    git("push", "-u", "origin", branch)
+    # 7. Push (force in case the branch exists from a previous run)
+    git("push", "--force", "-u", "origin", branch)
     print(f"\nPushed branch: {branch}")
 
     # 8. Create draft PRs
