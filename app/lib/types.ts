@@ -22,3 +22,10 @@ export interface Look {
 }
 
 export type ViewState = 'lobby' | 'collection' | 'detail'
+
+export type SubscriptionStatus = 'idle' | 'loading' | 'success' | 'error'
+
+export interface EmailSignupResponse {
+  success: boolean
+  message: string
+}

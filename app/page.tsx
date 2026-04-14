@@ -10,6 +10,7 @@ export const metadata: Metadata = {
 import TopAppBar from './components/UI/TopAppBar'
 import BottomNav from './components/UI/BottomNav'
 import CollectionCard from './components/UI/CollectionCard'
+import EmailSignupForm from './components/UI/EmailSignupForm'
 import { getCollections } from './lib/supabase'
 
 export default async function LobbyPage() {
@@ -73,6 +74,7 @@ export default async function LobbyPage() {
             height={36}
             className="h-9 w-auto opacity-80 mx-auto"
           />
+          <EmailSignupForm />
         </footer>
       </main>
 
