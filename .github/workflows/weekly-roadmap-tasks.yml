@@ -9,24 +9,14 @@ jobs:
   breakdown:
     runs-on: ubuntu-latest
     permissions:
-      contents: write
-      pull-requests: write
+      contents: read
+      issues: write
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Generate TASKS.md
-        run: python3 scripts/extract_roadmap_tasks.py > TASKS.md
-
-      - name: Open PR if TASKS.md changed
-        uses: peter-evans/create-pull-request@v6
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          branch: chore/weekly-roadmap-tasks
-          title: "chore: weekly roadmap task breakdown"
-          body: |
-            Automated weekly breakdown of incomplete roadmap items from `README.md`.
-
-            Review each section and tick off tasks as they are completed.
-          commit-message: "chore: update roadmap task breakdown"
-          labels: roadmap, automated
+      - name: Create GitHub Issues for incomplete roadmap tasks
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: python3 scripts/extract_roadmap_tasks.py
