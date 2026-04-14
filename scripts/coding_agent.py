@@ -95,9 +95,11 @@ def git(*args: str) -> str:
     return result.stdout.strip()
 
 
-def setup_git_identity():
+def setup_git_identity(token: str, repo: str):
     git("config", "user.email", "taskaugen-bot@users.noreply.github.com")
     git("config", "user.name", "TaskAugen Bot")
+    git("remote", "set-url", "origin",
+        f"https://x-access-token:{token}@github.com/{repo}.git")
 
 
 # ---------------------------------------------------------------------------
@@ -313,7 +315,7 @@ def main():
         print(f"  {i}. {t}")
 
     # 4. Set up git branch
-    setup_git_identity()
+    setup_git_identity(token, repo)
     clean_title = re.sub(r"^\[TaskAugen\]\s*", "", issue_title)
     slug = re.sub(r"[^a-z0-9]+", "-", clean_title.lower()).strip("-")[:40]
     branch = f"taskaugen/issue-{issue_number}-{slug}"
