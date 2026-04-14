@@ -185,7 +185,7 @@ def call_claude(prompt: str, api_key: str) -> list[str]:
 
     text = result["content"][0]["text"].strip()
     # Handle model wrapping output in ```json ... ```
-    match = re.search(r"\[.*?\]", text, re.DOTALL)
+    match = re.search(r"\[.*\]", text, re.DOTALL)
     if match:
         return json.loads(match.group())
     return json.loads(text)
@@ -212,20 +212,19 @@ def gh_request(method: str, path: str, token: str, body: dict | None = None):
     try:
         with urllib.request.urlopen(req) as resp:
             return json.loads(resp.read())
-    except urllib.error.HTTPError as e:
-        print(f"GitHub API error {e.code}: {e.read().decode()}", file=sys.stderr)
+    except urllib.error.HTTPError:
         raise
 
 
 def ensure_label(repo: str, token: str):
     try:
-        gh_request("GET", f"/repos/{repo}/labels/{LABEL}", token)
-    except urllib.error.HTTPError:
         gh_request("POST", f"/repos/{repo}/labels", token, {
             "name": LABEL,
             "color": "0075ca",
             "description": "Roadmap task auto-generated from README.md",
         })
+    except urllib.error.HTTPError:
+        pass  # 422 = already exists; ignore
 
 
 def get_existing_issue_titles(repo: str, token: str) -> set[str]:
@@ -247,12 +246,18 @@ def get_existing_issue_titles(repo: str, token: str) -> set[str]:
 
 
 def create_issue(repo: str, token: str, title: str, body: str, phase_label: str):
-    gh_request("POST", f"/repos/{repo}/issues", token, {
-        "title": title,
-        "body": body,
-        "labels": [LABEL, phase_label],
-    })
-    print(f"  ✓ Created: {title}")
+    try:
+        gh_request("POST", f"/repos/{repo}/issues", token, {
+            "title": title,
+            "body": body,
+            "labels": [LABEL, phase_label],
+        })
+        print(f"  ✓ Created: {title}")
+    except urllib.error.HTTPError as e:
+        if e.code == 410:
+            print(f"  ✗ Issues are disabled on {repo}. Enable them under Settings → Features → Issues.", file=sys.stderr)
+            sys.exit(1)
+        raise
 
 
 # ---------------------------------------------------------------------------
