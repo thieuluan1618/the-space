@@ -1,13 +1,16 @@
 """
 extract_roadmap_tasks.py
 
-Reads README.md, finds incomplete roadmap phases (those without ✅),
-and creates one GitHub Issue per roadmap item (with a sub-task checklist).
-Skips items that already have an open issue with the same title.
+1. Parses README.md for incomplete roadmap items.
+2. For each item, calls the Claude API with real codebase context to generate
+   specific, file-level sub-tasks (no hardcoded templates).
+3. Creates one GitHub Issue per item with a [TaskAugen] prefix.
+   Skips items that already have an open issue with the same title.
 
 Required env vars (set automatically by GitHub Actions):
   GITHUB_TOKEN      — token with issues: write permission
-  GITHUB_REPOSITORY — "owner/repo" (e.g. "thieuluan1618/the-space")
+  GITHUB_REPOSITORY — "owner/repo"
+  ANTHROPIC_API_KEY — Anthropic API key
 """
 
 import json
@@ -16,76 +19,13 @@ import re
 import sys
 import urllib.request
 import urllib.error
+from pathlib import Path
 
 README = "README.md"
 LABEL = "roadmap"
-
-# ---------------------------------------------------------------------------
-# Sub-task checklists keyed by keywords in the roadmap bullet text.
-# First keyword match wins.
-# ---------------------------------------------------------------------------
-SUBTASK_TEMPLATES = [
-    {
-        "keywords": ["seo", "generatemetadata", "metadata"],
-        "heading": "SEO metadata (`generateMetadata`)",
-        "tasks": [
-            "Add `generateMetadata` export to `app/works/[id]/page.tsx`",
-            "Add `generateMetadata` export to `app/seasons/[slug]/page.tsx`",
-            "Populate `title`, `description`, and `openGraph` fields from Supabase data",
-            "Add `<meta name=\"robots\">` to prevent indexing of draft content",
-        ],
-    },
-    {
-        "keywords": ["email", "signup", "newsletter"],
-        "heading": "Email signup for collection updates",
-        "tasks": [
-            "Create `app/components/UI/EmailSignup.tsx` form component",
-            "Add POST route handler at `app/api/subscribe/route.ts`",
-            "Integrate signup form into Lobby (`app/page.tsx`)",
-            "Add server-side validation and duplicate-email handling",
-        ],
-    },
-    {
-        "keywords": ["analytics"],
-        "heading": "Analytics (Vercel Analytics)",
-        "tasks": [
-            "Install `@vercel/analytics` package (`npm i @vercel/analytics`)",
-            "Add `<Analytics />` component to `app/layout.tsx`",
-            "Add `<SpeedInsights />` component to `app/layout.tsx` (optional)",
-            "Verify events appear in the Vercel dashboard after deploy",
-        ],
-    },
-    {
-        "keywords": ["about", "contact"],
-        "heading": "About / contact page",
-        "tasks": [
-            "Create `app/about/page.tsx` as a Server Component",
-            "Add 'About' link to `app/components/UI/BottomNav.tsx`",
-            "Add 'About' link to `app/components/UI/TopAppBar.tsx`",
-            "Match existing page design (no borders, warm neutral palette)",
-        ],
-    },
-    {
-        "keywords": ["3d", "three", "desktop mode"],
-        "heading": "3D experience (optional desktop mode)",
-        "tasks": [
-            "Unpark `app/components/3d/Lobby.tsx` and `CollectionRoom.tsx`",
-            "Add desktop-only conditional render in `app/layout.tsx` or `app/page.tsx`",
-            "Ensure the 3D bundle is code-split so mobile users don't load it",
-            "Test on desktop breakpoints (≥ 1024px)",
-        ],
-    },
-    {
-        "keywords": ["blog", "behind-the-scenes", "content"],
-        "heading": "Behind-the-scenes content / blog",
-        "tasks": [
-            "Create `app/blog/page.tsx` (list view) and `app/blog/[slug]/page.tsx` (detail)",
-            "Add `blog_posts` table to Supabase schema (title, slug, body, published_at)",
-            "Add helper functions to `app/lib/supabase.ts` for blog queries",
-            "Add 'Journal' or 'Blog' link to `app/components/UI/BottomNav.tsx`",
-        ],
-    },
-]
+CLAUDE_MODEL = "claude-haiku-4-5-20251001"
+MAX_FILE_CHARS = 3000   # Truncate large files to keep prompt size reasonable
+ISSUE_PREFIX = "[TaskAugen]"
 
 
 # ---------------------------------------------------------------------------
@@ -93,7 +33,7 @@ SUBTASK_TEMPLATES = [
 # ---------------------------------------------------------------------------
 
 def parse_roadmap(readme_path: str) -> list[dict]:
-    """Return [{phase, items}] for phases that are NOT marked ✅."""
+    """Return [{heading, items}] for phases that are NOT marked ✅."""
     with open(readme_path, encoding="utf-8") as f:
         lines = f.readlines()
 
@@ -124,13 +64,131 @@ def parse_roadmap(readme_path: str) -> list[dict]:
     return [p for p in phases if not p["complete"]]
 
 
-def match_template(bullet_text: str) -> dict:
-    lower = bullet_text.lower()
-    for tmpl in SUBTASK_TEMPLATES:
-        if any(kw in lower for kw in tmpl["keywords"]):
-            return tmpl
-    # Fallback
-    return {"heading": bullet_text, "tasks": [f"Implement: {bullet_text}"]}
+# ---------------------------------------------------------------------------
+# Codebase context helpers
+# ---------------------------------------------------------------------------
+
+def get_file_tree(root: str = "app", max_depth: int = 3) -> str:
+    """Return a compact directory tree, excluding noise."""
+    skip_dirs = {"node_modules", ".next", ".git", "__pycache__", "3d"}
+    lines = [f"{root}/"]
+    root_path = Path(root)
+    if not root_path.exists():
+        return "(app/ directory not found)"
+
+    for path in sorted(root_path.rglob("*")):
+        parts = set(path.parts)
+        if parts & skip_dirs:
+            continue
+        rel = path.relative_to(root_path)
+        if len(rel.parts) > max_depth:
+            continue
+        indent = "  " * len(rel.parts)
+        suffix = "/" if path.is_dir() else ""
+        lines.append(f"{indent}{path.name}{suffix}")
+
+    return "\n".join(lines)
+
+
+def read_file(path: str) -> str:
+    try:
+        content = Path(path).read_text(encoding="utf-8")
+        if len(content) > MAX_FILE_CHARS:
+            content = content[:MAX_FILE_CHARS] + "\n… (truncated)"
+        return content
+    except (FileNotFoundError, OSError):
+        return "(not found)"
+
+
+def get_relevant_files(item_text: str) -> dict[str, str]:
+    """Return {path: content} for files most relevant to the roadmap item."""
+    lower = item_text.lower()
+    files: dict[str, str] = {}
+
+    # Architecture anchors — always useful
+    for p in ["app/layout.tsx", "app/lib/supabase.ts", "app/lib/types.ts"]:
+        files[p] = read_file(p)
+
+    if any(k in lower for k in ["seo", "metadata", "generatemetadata"]):
+        files["app/works/[id]/page.tsx"] = read_file("app/works/[id]/page.tsx")
+        files["app/seasons/[slug]/page.tsx"] = read_file("app/seasons/[slug]/page.tsx")
+
+    if any(k in lower for k in ["email", "signup", "newsletter"]):
+        files["app/page.tsx"] = read_file("app/page.tsx")
+
+    if any(k in lower for k in ["about", "contact", "nav"]):
+        files["app/components/UI/BottomNav.tsx"] = read_file("app/components/UI/BottomNav.tsx")
+        files["app/components/UI/TopAppBar.tsx"] = read_file("app/components/UI/TopAppBar.tsx")
+
+    if any(k in lower for k in ["analytics"]):
+        files["app/layout.tsx"] = read_file("app/layout.tsx")
+
+    if any(k in lower for k in ["blog", "behind", "content"]):
+        files["app/lib/supabase.ts"] = read_file("app/lib/supabase.ts")
+        files["app/seasons/page.tsx"] = read_file("app/seasons/page.tsx")
+
+    return files
+
+
+# ---------------------------------------------------------------------------
+# Claude API
+# ---------------------------------------------------------------------------
+
+def build_prompt(item_text: str, phase: str, file_tree: str, relevant_files: dict) -> str:
+    files_section = "\n\n".join(
+        f"### {path}\n```tsx\n{content}\n```"
+        for path, content in relevant_files.items()
+    )
+    return f"""You are a senior Next.js engineer. Your job is to break a roadmap item into specific, actionable sub-tasks by analyzing the real codebase.
+
+## Project
+The Space — a mobile-first 2D digital gallery for fashion designer Trinh Chau.
+Stack: Next.js 14 App Router, Tailwind CSS, Supabase (read-only), TypeScript.
+Design rules: border-radius 0px everywhere, no borders for sectioning, warm neutral palette, no commerce features.
+
+## App directory structure
+```
+{file_tree}
+```
+
+## Relevant existing files
+{files_section}
+
+## Roadmap item
+Phase: {phase}
+Item: {item_text}
+
+Based on the actual files above, generate 4–6 specific, actionable sub-tasks to implement this item.
+Reference exact file paths. Point out files that need to be created vs modified.
+Return ONLY a valid JSON array of strings — no explanation, no markdown fences.
+Example: ["Add generateMetadata export to app/works/[id]/page.tsx", "Create app/api/subscribe/route.ts"]"""
+
+
+def call_claude(prompt: str, api_key: str) -> list[str]:
+    payload = {
+        "model": CLAUDE_MODEL,
+        "max_tokens": 1024,
+        "messages": [{"role": "user", "content": prompt}],
+    }
+    req = urllib.request.Request(
+        "https://api.anthropic.com/v1/messages",
+        data=json.dumps(payload).encode(),
+        method="POST",
+        headers={
+            "x-api-key": api_key,
+            "anthropic-version": "2023-06-01",
+            "content-type": "application/json",
+        },
+    )
+    with urllib.request.urlopen(req) as resp:
+        result = json.loads(resp.read())
+
+    text = result["content"][0]["text"].strip()
+    # Handle model wrapping output in ```json ... ```
+    match = re.search(r"\[.*?\]", text, re.DOTALL)
+    if match:
+        return json.loads(match.group())
+    return json.loads(text)
 
 
 # ---------------------------------------------------------------------------
@@ -160,7 +218,6 @@ def gh_request(method: str, path: str, token: str, body: dict | None = None):
 
 
 def ensure_label(repo: str, token: str):
-    """Create the 'roadmap' label if it doesn't already exist."""
     try:
         gh_request("GET", f"/repos/{repo}/labels/{LABEL}", token)
     except urllib.error.HTTPError:
@@ -172,7 +229,6 @@ def ensure_label(repo: str, token: str):
 
 
 def get_existing_issue_titles(repo: str, token: str) -> set[str]:
-    """Return titles of all open issues labelled 'roadmap'."""
     titles, page = set(), 1
     while True:
         issues = gh_request(
@@ -206,9 +262,13 @@ def create_issue(repo: str, token: str, title: str, body: str, phase_label: str)
 def main():
     token = os.environ.get("GITHUB_TOKEN")
     repo = os.environ.get("GITHUB_REPOSITORY")
+    api_key = os.environ.get("ANTHROPIC_API_KEY")
 
     if not token or not repo:
         print("ERROR: GITHUB_TOKEN and GITHUB_REPOSITORY must be set.", file=sys.stderr)
+        sys.exit(1)
+    if not api_key:
+        print("ERROR: ANTHROPIC_API_KEY must be set.", file=sys.stderr)
         sys.exit(1)
 
     try:
@@ -221,36 +281,44 @@ def main():
         print("All roadmap phases are complete — nothing to do.")
         return
 
+    file_tree = get_file_tree("app")
     ensure_label(repo, token)
     existing = get_existing_issue_titles(repo, token)
 
     created = skipped = 0
 
     for phase in phases:
-        # Derive a short label like "phase-2" from "Phase 2 (Next)"
         phase_label = re.sub(r"[^a-z0-9]+", "-", phase["heading"].lower()).strip("-")
-
         print(f"\n## {phase['heading']}")
 
         for item_text in phase["items"]:
-            tmpl = match_template(item_text)
-            title = f"[TaskAugen] {tmpl['heading']}"
+            title = f"{ISSUE_PREFIX} {item_text}"
 
             if title in existing:
                 print(f"  – Skipped (already open): {title}")
                 skipped += 1
                 continue
 
-            checklist = "\n".join(f"- [ ] {t}" for t in tmpl["tasks"])
+            print(f"  → Analyzing: {item_text}")
+            relevant_files = get_relevant_files(item_text)
+            prompt = build_prompt(item_text, phase["heading"], file_tree, relevant_files)
+
+            try:
+                subtasks = call_claude(prompt, api_key)
+            except Exception as e:
+                print(f"    Claude API error: {e} — skipping", file=sys.stderr)
+                continue
+
+            checklist = "\n".join(f"- [ ] {t}" for t in subtasks)
             body = (
                 f"**Phase:** {phase['heading']}\n\n"
                 f"### Tasks\n\n"
                 f"{checklist}\n\n"
-                f"---\n_Auto-generated from `README.md` Phase Roadmap._"
+                f"---\n_Sub-tasks generated by Claude from codebase analysis of `README.md`._"
             )
 
             create_issue(repo, token, title, body, phase_label)
-            existing.add(title)  # prevent duplicates within the same run
+            existing.add(title)
             created += 1
 
     print(f"\nDone — {created} issue(s) created, {skipped} skipped (already open).")
