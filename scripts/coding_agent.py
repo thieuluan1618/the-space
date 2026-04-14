@@ -4,7 +4,7 @@ coding_agent.py
 1. Fetches the highest-priority open roadmap issue.
 2. Parses its unchecked tasks and asks Claude to sort them easiest → hardest.
 3. For each task (easiest first), asks Claude to generate file changes.
-4. Applies all changes, commits to branch taskaugen/issue-{N}, opens a draft PR.
+4. Applies all changes, commits to branch taskaugen/issue-{N}, opens a PR.
 
 Required env vars:
   GITHUB_TOKEN      — contents: write + pull-requests: write + issues: write
@@ -90,8 +90,11 @@ def get_relevant_files(task: str, issue_title: str) -> dict[str, str]:
 def git(*args: str) -> str:
     result = subprocess.run(
         ["git"] + list(args),
-        capture_output=True, text=True, check=True,
+        capture_output=True, text=True,
     )
+    if result.returncode != 0:
+        print(f"git {' '.join(args)} failed:\n{result.stderr.strip()}", file=sys.stderr)
+        raise subprocess.CalledProcessError(result.returncode, ["git"] + list(args))
     return result.stdout.strip()
 
 
@@ -170,13 +173,12 @@ def get_next_issue(repo: str, token: str) -> dict | None:
 
 def create_pr(repo: str, token: str, head: str, base: str,
               title: str, body: str) -> str:
-    """Create a draft PR. head can be 'branch' or 'owner:branch' for cross-repo."""
+    """Create a PR. head can be 'branch' or 'owner:branch' for cross-repo."""
     result = gh_request("POST", f"/repos/{repo}/pulls", token, {
         "title": title,
         "body": body,
         "head": head,
         "base": base,
-        "draft": True,
     })
     return result["html_url"]
 
@@ -345,10 +347,30 @@ def main():
     clean_title = re.sub(r"^\[TaskAugen\]\s*", "", issue_title)
     slug = re.sub(r"[^a-z0-9]+", "-", clean_title.lower()).strip("-")[:40]
     branch = f"taskaugen/issue-{issue_number}-{slug}"
-    base   = git("rev-parse", "--abbrev-ref", "HEAD")
+    base   = "main"
 
-    git("checkout", "-b", branch)
-    print(f"\nBranch: {branch}")
+    # Prefer to branch from upstream/main so the work is based on the
+    # latest upstream code, not the fork which may lag behind.
+    fetched_upstream = False
+    if upstream_repo:
+        upstream_url = (
+            f"https://x-access-token:{upstream_token}@github.com/{upstream_repo}.git"
+            if upstream_token
+            else f"https://github.com/{upstream_repo}.git"
+        )
+        try:
+            git("remote", "add", "upstream", upstream_url)
+            git("fetch", "upstream", "main")
+            fetched_upstream = True
+        except subprocess.CalledProcessError:
+            print("  upstream fetch failed — branching from fork main", file=sys.stderr)
+
+    if fetched_upstream:
+        git("checkout", "-b", branch, "upstream/main")
+        print(f"\nBranch: {branch}  (from upstream/main)")
+    else:
+        git("checkout", "-b", branch)
+        print(f"\nBranch: {branch}  (from fork/main)")
 
     # 5. Implement each task
     all_changed_files: list[str] = []
@@ -393,11 +415,11 @@ def main():
         f"Auto-implemented by TaskAugen coding agent.\n"
         f"Closes #{issue_number}")
 
-    # 7. Push
-    git("push", "-u", "origin", branch)
+    # 7. Push (force in case the branch exists from a previous run)
+    git("push", "--force", "-u", "origin", branch)
     print(f"\nPushed branch: {branch}")
 
-    # 8. Create draft PRs
+    # 8. Create PRs
     fork_owner   = repo.split("/")[0]
     changed_list = "\n".join(f"- `{f}`" for f in unique_files)
     task_list    = "\n".join(f"- [x] {t}" for t in tasks)
