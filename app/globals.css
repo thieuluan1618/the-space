@@ -53,3 +53,169 @@ img {
   outline: 2px dashed #000000;
   outline-offset: 2px;
 }
+
+/* Form inputs — warm neutral palette, no border-radius */
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="search"],
+input[type="tel"],
+input[type="url"],
+textarea,
+select {
+  border-radius: 0;
+  background-color: #faf9f6;
+  color: #0d0f0d;
+  border: 1px solid #6a5e45;
+  padding: 0.625rem 0.875rem;
+  font-family: var(--font-inter), SF Pro Display, system-ui, helvetica, sans-serif;
+  font-size: 0.875rem;
+  font-weight: 400;
+  letter-spacing: -0.14px;
+  width: 100%;
+  appearance: none;
+  -webkit-appearance: none;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+input[type="text"]:focus,
+input[type="email"]:focus,
+input[type="password"]:focus,
+input[type="search"]:focus,
+input[type="tel"]:focus,
+input[type="url"]:focus,
+textarea:focus,
+select:focus {
+  outline: 2px dashed #0d0f0d;
+  outline-offset: 2px;
+  border-color: #0d0f0d;
+  background-color: #ffffff;
+}
+
+input[type="text"]::placeholder,
+input[type="email"]::placeholder,
+input[type="password"]::placeholder,
+input[type="search"]::placeholder,
+input[type="tel"]::placeholder,
+input[type="url"]::placeholder,
+textarea::placeholder {
+  color: #6a5e45;
+  opacity: 0.6;
+}
+
+input[type="text"]:disabled,
+input[type="email"]:disabled,
+input[type="password"]:disabled,
+input[type="search"]:disabled,
+input[type="tel"]:disabled,
+input[type="url"]:disabled,
+textarea:disabled,
+select:disabled {
+  background-color: #f0ede6;
+  color: #6a5e45;
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Buttons — warm neutral palette, no border-radius */
+button,
+input[type="submit"],
+input[type="button"],
+input[type="reset"] {
+  border-radius: 0;
+  font-family: var(--font-inter), SF Pro Display, system-ui, helvetica, sans-serif;
+  font-size: 0.6875rem;
+  font-weight: 400;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: opacity 0.2s ease, background-color 0.2s ease, color 0.2s ease;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+/* Primary button */
+.btn-primary {
+  border-radius: 0;
+  background-color: #0d0f0d;
+  color: #faf9f6;
+  border: none;
+  padding: 0.625rem 1.25rem;
+  font-family: var(--font-space-mono), monospace;
+  font-size: 0.6875rem;
+  font-weight: 400;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.2s ease;
+}
+
+.btn-primary:hover {
+  opacity: 0.8;
+}
+
+.btn-primary:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Secondary button */
+.btn-secondary {
+  border-radius: 0;
+  background-color: transparent;
+  color: #0d0f0d;
+  border: 1px solid #0d0f0d;
+  padding: 0.625rem 1.25rem;
+  font-family: var(--font-space-mono), monospace;
+  font-size: 0.6875rem;
+  font-weight: 400;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.btn-secondary:hover {
+  background-color: #0d0f0d;
+  color: #faf9f6;
+}
+
+.btn-secondary:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Ghost / muted button */
+.btn-ghost {
+  border-radius: 0;
+  background-color: transparent;
+  color: #6a5e45;
+  border: 1px solid #6a5e45;
+  padding: 0.625rem 1.25rem;
+  font-family: var(--font-space-mono), monospace;
+  font-size: 0.6875rem;
+  font-weight: 400;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.btn-ghost:hover {
+  background-color: #6a5e45;
+  color: #faf9f6;
+}
+
+.btn-ghost:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}

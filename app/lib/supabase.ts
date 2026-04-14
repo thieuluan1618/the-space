@@ -1,6 +1,6 @@
 // app/lib/supabase.ts
 import { createClient } from '@supabase/supabase-js'
-import type { Collection, Look } from './types'
+import type { Collection, Look, SubscriptionStatus } from './types'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || ''
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
@@ -116,68 +116,102 @@ export async function getCollectionBySlug(slug: string): Promise<Collection | nu
   }
 }
 
-// Fetch looks by collection
+// Fetch looks for a collection
 export async function getLooksByCollection(collectionId: string): Promise<Look[]> {
   const { data, error } = await supabase
     .from('looks')
-    .select('id, name, description, tags, photos, collection_id, sort_order')
+    .select('id, collection_id, name, description, tags, photos, sort_order')
     .eq('collection_id', collectionId)
     .eq('status', 'published')
     .order('sort_order', { ascending: true })
 
-  if (error) console.error('Error fetching looks:', error)
-  return (data || []).map(mapLook)
-}
-
-// Fetch all published looks with optional search and pagination
-export async function getAllLooks(
-  search?: string,
-  page = 1,
-  pageSize = 24
-): Promise<{ looks: Look[]; total: number }> {
-  const offset = (page - 1) * pageSize
-
-  let query = supabase
-    .from('looks')
-    .select('id, name, description, tags, photos, collection_id, sort_order', { count: 'exact' })
-    .eq('status', 'published')
-    .order('sort_order', { ascending: true })
-    .range(offset, offset + pageSize - 1)
-
-  if (search && search.trim()) {
-    query = query.ilike('name', `%${search.trim()}%`)
+  if (error) {
+    console.error('Error fetching looks:', error)
+    return []
   }
-
-  const { data, error, count } = await query
-
-  if (error) console.error('Error fetching all looks:', error)
-  return {
-    looks: (data || []).map(mapLook),
-    total: count ?? 0,
-  }
+  return (data || []).map((l) => mapLook(l as Record<string, unknown>))
 }
 
-export interface OwnerProfile {
-  display_name?: string
-  profile_photo_url?: string
-  social_instagram?: string
-  social_zalo?: string
-}
-
-// Fetch owner profile (placeholder — no DB table yet)
-export async function getOwnerProfile(): Promise<OwnerProfile | null> {
-  return null
-}
-
-// Fetch single look
-export async function getLook(lookId: string): Promise<Look | null> {
+// Fetch a single look by id
+export async function getLookById(lookId: string): Promise<Look | null> {
   const { data, error } = await supabase
     .from('looks')
-    .select('id, name, description, tags, photos, collection_id, sort_order')
+    .select('id, collection_id, name, description, tags, photos, sort_order')
     .eq('id', lookId)
     .single()
 
-  if (error) console.error('Error fetching look:', error)
+  if (error) {
+    console.error('Error fetching look by id:', error)
+    return null
+  }
   if (!data) return null
   return mapLook(data as Record<string, unknown>)
+}
+
+/**
+ * email_subscribers table schema:
+ *
+ * CREATE TABLE email_subscribers (
+ *   id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+ *   email       text NOT NULL UNIQUE,
+ *   subscribed_at timestamptz NOT NULL DEFAULT now(),
+ *   active      boolean NOT NULL DEFAULT true
+ * );
+ *
+ * Row-level security: INSERT allowed for anon role (no SELECT/UPDATE/DELETE for anon).
+ * Index: CREATE UNIQUE INDEX email_subscribers_email_idx ON email_subscribers (email);
+ */
+
+export interface EmailSubscriber {
+  id: string
+  email: string
+  subscribed_at: string
+  active: boolean
+}
+
+/**
+ * Fetch all active email subscribers.
+ * Intended for server-side / admin use only — the anon key will be blocked
+ * by RLS unless you grant SELECT to anon or use the service role key.
+ */
+export async function getEmailSubscribers(): Promise<EmailSubscriber[]> {
+  const { data, error } = await supabase
+    .from('email_subscribers')
+    .select('id, email, subscribed_at, active')
+    .eq('active', true)
+    .order('subscribed_at', { ascending: false })
+
+  if (error) {
+    console.error('Error fetching email subscribers:', error)
+    return []
+  }
+  return (data || []) as EmailSubscriber[]
+}
+
+/**
+ * Subscribe an email address to collection updates.
+ * Inserts a new row; if the email already exists the unique constraint
+ * causes an error which is surfaced as status 'error' with a friendly message.
+ *
+ * Returns an object compatible with EmailSignupResponse from types.ts.
+ */
+export async function subscribeEmail(email: string): Promise<{ success: boolean; message: string }> {
+  if (!email || !email.includes('@')) {
+    return { success: false, message: 'Please enter a valid email address.' }
+  }
+
+  const { error } = await supabase
+    .from('email_subscribers')
+    .insert({ email: email.trim().toLowerCase() })
+
+  if (error) {
+    // Unique violation: Postgres error code 23505
+    if (error.code === '23505') {
+      return { success: false, message: 'This email is already subscribed.' }
+    }
+    console.error('Error subscribing email:', error)
+    return { success: false, message: 'Something went wrong. Please try again.' }
+  }
+
+  return { success: true, message: 'You are now subscribed to collection updates.' }
 }
