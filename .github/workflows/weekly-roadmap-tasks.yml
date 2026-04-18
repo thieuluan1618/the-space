@@ -2,7 +2,7 @@ name: Weekly Roadmap Task Breakdown
 
 on:
   schedule:
-    - cron: '0 9 * * 6'  # Every Saturday at 9am UTC
+    - cron: '0 2 * * 6'  # Every Saturday at 9am ICT (Asia/Ho_Chi_Minh, UTC+7)
   workflow_dispatch:
 
 jobs:
