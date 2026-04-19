@@ -1,0 +1,40 @@
+name: TaskAugen Coding Agent
+
+on:
+  workflow_dispatch:
+    inputs:
+      model:
+        description: 'Claude model ID to use for code generation'
+        required: false
+        default: 'claude-sonnet-4-6'
+      create_upstream_pr:
+        description: 'Create PR to upstream repo (nguyenlambuu/the-space)?'
+        required: false
+        type: boolean
+        default: true
+  schedule:
+    - cron: '30 9 * * 6'
+      timezone: 'Asia/Ho_Chi_Minh'
+
+jobs:
+  code:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Run coding agent
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          UPSTREAM_REPO: ${{ inputs.create_upstream_pr != 'false' && (vars.UPSTREAM_REPO || 'nguyenlambuu/the-space') || '' }}
+          UPSTREAM_TOKEN: ${{ secrets.UPSTREAM_TOKEN }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          CLAUDE_MODEL: ${{ inputs.model || vars.CLAUDE_MODEL || 'claude-sonnet-4-6' }}
+        run: python3 scripts/coding_agent.py
