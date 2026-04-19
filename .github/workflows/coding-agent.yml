@@ -13,7 +13,8 @@ on:
         type: boolean
         default: true
   schedule:
-    - cron: '0 3 * * 1'  # Every Monday at 10am ICT (Asia/Ho_Chi_Minh, UTC+7)
+    - cron: '0 10 * * 1'
+      timezone: 'Asia/Ho_Chi_Minh'
 
 jobs:
   code:

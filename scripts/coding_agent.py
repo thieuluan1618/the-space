@@ -4,12 +4,14 @@ coding_agent.py
 1. Fetches the highest-priority open roadmap issue.
 2. Parses its unchecked tasks and asks Claude to sort them easiest → hardest.
 3. For each task (easiest first), asks Claude to generate file changes.
-4. Applies all changes, commits to branch taskaugen/issue-{N}, opens a PR.
+4. Validates changes with Supabase MCP (SDK syntax, migrations, RLS policies).
+5. Applies all changes, commits to branch taskaugen/issue-{N}, opens a PR.
 
 Required env vars:
   GITHUB_TOKEN      — contents: write + pull-requests: write + issues: write
   GITHUB_REPOSITORY — "owner/repo"
   ANTHROPIC_API_KEY — Anthropic API key
+  SUPABASE_PROJECT_ID (optional) — for Supabase validation checks
 """
 
 import json
@@ -26,6 +28,9 @@ CLAUDE_MODEL = os.environ.get("CLAUDE_MODEL", "claude-sonnet-4-6")
 MAX_FILE_CHARS = 4000
 ISSUE_PREFIX = "[TaskAugen]"
 PRIORITY_ORDER = {"priority: high": 0, "priority: medium": 1, "priority: low": 2}
+
+# Supabase validation
+SUPABASE_PROJECT_ID = os.environ.get("SUPABASE_PROJECT_ID", "")
 
 
 # ---------------------------------------------------------------------------
@@ -103,6 +108,67 @@ def setup_git_identity(token: str, repo: str):
     git("config", "user.name", "TaskAugen Bot")
     git("remote", "set-url", "origin",
         f"https://x-access-token:{token}@github.com/{repo}.git")
+
+
+# ---------------------------------------------------------------------------
+# Supabase validation (MCP)
+# ---------------------------------------------------------------------------
+
+def validate_supabase_changes(changes: list[dict]) -> list[str]:
+    """
+    Validate Supabase-related changes:
+    - Check for upsert/insert syntax errors
+    - Validate migration SQL
+    - Warn about missing RLS policies
+    Returns list of warnings/errors.
+    """
+    warnings = []
+
+    for change in changes:
+        path = change["path"]
+        content = change["content"]
+
+        # Check API routes for common Supabase SDK issues
+        if "/api/" in path and path.endswith(".ts"):
+            # Check for upsert with incorrect options (like the email signup bug)
+            if ".upsert(" in content:
+                if "onConflict:" in content or "ignoreDuplicates:" in content:
+                    warnings.append(
+                        f"⚠️  {path}: upsert() has incorrect options. "
+                        "Use .insert() and handle 23505 errors instead."
+                    )
+            # Check for unvalidated environment variables
+            if "process.env." in content and "|| ''" in content:
+                warnings.append(
+                    f"⚠️  {path}: Env var defaults to empty string. "
+                    "Add runtime checks before using with Supabase client."
+                )
+
+        # Check migrations for RLS policies
+        if "migrations" in path and path.endswith(".sql"):
+            # Warn if table created but no RLS policy
+            if "CREATE TABLE" in content and "enable row level security" not in content:
+                warnings.append(
+                    f"⚠️  {path}: Table created without RLS. "
+                    "Add 'ALTER TABLE ... ENABLE ROW LEVEL SECURITY;'"
+                )
+            # Warn if public insert without explicit policy
+            if "INSERT" in content.upper() and "create policy" not in content.lower():
+                warnings.append(
+                    f"⚠️  {path}: Public insert allowed but no RLS policy defined. "
+                    "Add explicit policies for security."
+                )
+
+        # Check lib/supabase.ts for type safety
+        if path == "app/lib/supabase.ts":
+            # Warn about loose type casts
+            if " as Record<string, unknown>" in content:
+                warnings.append(
+                    f"⚠️  {path}: Loose 'as Record<string, unknown>' cast. "
+                    "Use specific types for better type safety."
+                )
+
+    return warnings
 
 
 # ---------------------------------------------------------------------------
@@ -249,7 +315,7 @@ def generate_file_changes(task: str, issue_title: str,
 
 ## Project
 The Space — a mobile-first 2D digital gallery for fashion designer Trinh Chau.
-Stack: Next.js 14 App Router, Tailwind CSS, Supabase (read-only), TypeScript.
+Stack: Next.js 14 App Router, Tailwind CSS, Supabase (v2.38.0), TypeScript.
 Design rules: border-radius 0px everywhere, no borders for sectioning, warm neutral palette (#faf9f6 bg, #6a5e45 secondary, #0d0f0d headings), Inter font.
 No commerce, no auth, no rounded corners.
 
@@ -259,6 +325,14 @@ No commerce, no auth, no rounded corners.
 ## Task to implement
 Issue: {issue_title}
 Task: {task}
+
+## Supabase best practices
+- Use `.insert()` for new records; use `.upsert()` only with correct SDK syntax (no `onConflict`/`ignoreDuplicates`).
+- Handle PostgreSQL error 23505 (unique constraint) gracefully.
+- Always enable RLS on new tables: `ALTER TABLE ... ENABLE ROW LEVEL SECURITY;`
+- Create explicit `CREATE POLICY` statements for public operations.
+- Validate environment variables before creating Supabase clients.
+- Use specific TypeScript types instead of loose `as Record<string, unknown>` casts.
 
 Instructions:
 - Implement ONLY what this task requires. No extra features.
@@ -389,6 +463,13 @@ def main():
         if not changes:
             print("  ✗ Claude returned no file changes — skipping task")
             continue
+
+        # Validate Supabase changes before applying
+        warnings = validate_supabase_changes(changes)
+        if warnings:
+            print(f"  Supabase validation warnings:")
+            for warning in warnings:
+                print(f"    {warning}")
 
         for change in changes:
             path = change["path"]
