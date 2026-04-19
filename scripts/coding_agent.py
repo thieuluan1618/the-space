@@ -350,6 +350,10 @@ Instructions:
         r'<file\s+path="([^"]+)"[^>]*>(.*?)</file>', text, re.DOTALL
     ):
         path = match.group(1).strip()
+        # GITHUB_TOKEN cannot push workflow files — skip them
+        if path.startswith(".github/workflows/"):
+            print(f"  ⚠ Skipped {path} (workflow files must be managed manually)")
+            continue
         content = match.group(2).strip()
         # Strip accidental markdown fences Claude might wrap content in
         content = re.sub(r'^```[a-z]*\n', '', content)
