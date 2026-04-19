@@ -350,10 +350,6 @@ Instructions:
         r'<file\s+path="([^"]+)"[^>]*>(.*?)</file>', text, re.DOTALL
     ):
         path = match.group(1).strip()
-        # GITHUB_TOKEN cannot push workflow files — skip them
-        if path.startswith(".github/workflows/"):
-            print(f"  ⚠ Skipped {path} (workflow files must be managed manually)")
-            continue
         content = match.group(2).strip()
         # Strip accidental markdown fences Claude might wrap content in
         content = re.sub(r'^```[a-z]*\n', '', content)
@@ -420,8 +416,10 @@ def main():
     for i, t in enumerate(tasks, 1):
         print(f"  {i}. {t}")
 
-    # 4. Set up git branch
-    setup_git_identity(token, repo)
+    # 4. Set up git branch — prefer UPSTREAM_TOKEN (classic PAT with workflow scope)
+    # so .github/workflows/ files can be pushed; fall back to GITHUB_TOKEN.
+    push_token = upstream_token or token
+    setup_git_identity(push_token, repo)
     clean_title = re.sub(r"^\[TaskAugen\]\s*", "", issue_title)
     slug = re.sub(r"[^a-z0-9]+", "-", clean_title.lower()).strip("-")[:40]
     branch = f"taskaugen/issue-{issue_number}-{slug}"
