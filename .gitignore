@@ -38,3 +38,5 @@ looks_example/
 # python bytecode (from scripts/)
 __pycache__/
 *.pyc
+
+supabase/.temp/
