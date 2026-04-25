@@ -32,7 +32,6 @@ export async function POST(request: NextRequest) {
       .upsert({ email: trimmed }, { onConflict: 'email', ignoreDuplicates: true })
 
     if (error) {
-      // Duplicate email - return success to avoid enumeration
       if (error.code === '23505') {
         return NextResponse.json(
           { success: true, message: 'You are now subscribed to collection updates.' },
